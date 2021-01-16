@@ -2,7 +2,7 @@ const path = require('path');
 const express = require('express');
 const bodyParser = require("body-parser");
 const session = require("express-session");
-const { injectIsAuthenticated, emptySessionFromStore, signin, signup } = require('./auth');
+const { injectIsAuthenticated, emptySessionFromStore, signin, signup, userInfo } = require('./auth');
 const store = require('./store');
 const mongoose = require('mongoose');
 
@@ -58,6 +58,7 @@ app.get('/logout', emptySessionFromStore, (req, res) => {
         msg: 'Success'
     })
 });
+app.get('/userinfo', injectIsAuthenticated, userInfo);
 app.post('/signin', signin);
 app.post('/signup', signup);
 

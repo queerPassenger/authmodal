@@ -1,4 +1,5 @@
 const models = require('./models');
+const bcrypt = require('bcrypt');
 
 const injectSessionData = (req, uid) => {
     if(uid) {
@@ -33,19 +34,24 @@ const signin = (req, res) => {
         password
     } = req.body;
     models.User.findOne({
-        username,
-        password
+        username        
     }, (err, resp) => {
         if(err || !resp) {
             return res.status(500).send({
-                msg: 'Invalid username / password'
+                msg: 'Invalid username'
             })
         }
         else {
-            injectSessionData(req, username);     
-            return res.status(200).send({
-                msg: 'Success'
-            });
+            if(!bcrypt.compareSync(password, resp.password))
+                return res.status(500).send({
+                    msg: 'Invalid password'
+                })
+            else {
+                injectSessionData(req, username);     
+                return res.status(200).send({
+                    msg: 'Success'
+                });
+            }            
         }
     });       
 }
@@ -81,7 +87,7 @@ const signup = (req, res) => {
     } = req.body;
     let newUser = new models.User({
         username,
-        password,
+        password: bcrypt.hashSync(password, 14),
         emailId
     });
     newUser.save((err) => {
@@ -97,16 +103,35 @@ const signup = (req, res) => {
         }
         else {
             injectSessionData(req, username);     
-            return res.status(200).send({
+            return res.status(201).send({
                 msg: 'Success'
             });
         }
     })
+}
+const userInfo = (req, res, next) => {
+    if(req.isAuthenticated) {
+        const username = req.session['session-uid'];
+        models.User.findOne({
+            username            
+        }, "username emailId", (err, resp) => {
+            if(err || !resp)
+                return res.status(401);            
+            else
+                return res.status(200).send({
+                    username: resp.username,
+                    emailId: resp.emailId
+                });
+        });  
+    }
+    else 
+        return res.status(401);
 }
 module.exports = {
     injectSessionData,
     injectIsAuthenticated,
     emptySessionFromStore,
     signin,
-    signup
+    signup,
+    userInfo
 }
